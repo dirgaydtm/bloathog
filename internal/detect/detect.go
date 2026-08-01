@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/dirgaa/bloathog/internal/eror"
 )
 
 // Detect parses args for manual mode or auto-detects the project via manifests.
@@ -18,13 +20,13 @@ func Detect(dir string, args []string) (DetectResult, error) {
 	if len(parsedArgs) > 0 {
 		cmd := parsedArgs[0]
 		if _, err := exec.LookPath(cmd); err != nil {
-			return DetectResult{}, fmt.Errorf("executable '%s' not found in PATH\n\nTip: check your command spelling", cmd)
+			return DetectResult{}, &eror.Error{Msg: fmt.Sprintf("executable '%s' not found in PATH", cmd), Tip: "check your command spelling"}
 		}
 
 		// Enforce package.json for known JS package managers
 		if cmd == "npm" || cmd == "yarn" || cmd == "pnpm" || cmd == "bun" {
 			if _, err := os.Stat(filepath.Join(dir, "package.json")); os.IsNotExist(err) {
-				return DetectResult{}, fmt.Errorf("%w\n\nTip: check if you are in the correct directory", ErrNoPackageJSON)
+				return DetectResult{}, &eror.Error{Msg: "missing package.json", Tip: "check if you are in the correct directory"}
 			}
 		}
 
@@ -39,7 +41,7 @@ func Detect(dir string, args []string) (DetectResult, error) {
 
 	pm := DetectPackageManager(dir)
 	if _, err := exec.LookPath(pm); err != nil {
-		return DetectResult{}, fmt.Errorf("package manager '%s' not found in PATH\n\nTip: install %s or use manual mode", pm, pm)
+		return DetectResult{}, &eror.Error{Msg: fmt.Sprintf("package manager '%s' not found in PATH", pm), Tip: fmt.Sprintf("install %s or use manual mode", pm)}
 	}
 
 	runCommand := "run"

@@ -1,27 +1,31 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/stopwatch"
-	"github.com/charmbracelet/bubbles/spinner"
+	"fmt"
 	"os/exec"
+	"strings"
 	"time"
+
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/dirgaa/bloathog/internal/eror"
 	"github.com/dirgaa/bloathog/internal/monitor"
 	"github.com/dirgaa/bloathog/internal/ui/components"
 	"github.com/dirgaa/bloathog/internal/ui/types"
 )
 
 const (
-	maxGraphSamples  = 120
-	maxLogLines      = 5000
-	focusLog         = 0
-	focusProc        = 1
-	focusGraph       = 2
-	focusCount       = 3
+	maxGraphSamples = 120
+	maxLogLines     = 5000
+	focusLog        = 0
+	focusProc       = 1
+	focusGraph      = 2
+	focusCount      = 3
 )
 
 // Model is the root Bubble Tea model for bloathog.
@@ -33,7 +37,7 @@ type Model struct {
 	cmd      *exec.Cmd
 	started  bool
 	quitting bool
-	exitCode int
+	ExitCode int
 
 	// Monitor state (streaming stats)
 	stats    types.MonitorState
@@ -44,7 +48,7 @@ type Model struct {
 	cpuGraph    []float64
 	activeGraph int // 0 = RAM, 1 = CPU
 	logs        []string
-	logDirty bool
+	logDirty    bool
 
 	// UI components
 	logPanel    components.LogPanel
@@ -55,14 +59,14 @@ type Model struct {
 	focusTarget int
 
 	// Layout
-	width    int
-	height   int
-	procW    int // cached panel width, set in relayout()
+	width  int
+	height int
+	procW  int // cached panel width, set in relayout()
 
 	// Exit state
 	exitReport string
 	startTime  time.Time
-	fatalErr   error
+	FatalErr   error
 }
 
 func NewModel(info types.ProjectInfo) tea.Model {
@@ -163,7 +167,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.graph) > maxGraphSamples {
 				m.graph = m.graph[1:]
 			}
-			
+
 			cpu := msg.Stats.TotalCPU
 			m.stats.CurrentCPU = cpu
 			if cpu > m.stats.PeakCPU {
@@ -188,11 +192,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, drainCmd(msg.ch))
 
 	case monitor.ChildExitMsg:
-		m.exitCode = msg.ExitCode
+		m.ExitCode = msg.ExitCode
+		if m.ExitCode != 0 && len(m.graph) == 0 {
+			rawLogs := strings.Join(m.logs, "\n")
+			m.FatalErr = &eror.Error{Msg: fmt.Sprintf("command '%s' failed to start properly\n%s", m.projectInfo.Command, rawLogs)}
+		}
 		return m.quit()
 
 	case monitor.ErrorMsg:
-		m.fatalErr = msg.Err
+		m.FatalErr = msg.Err
 		return m.quit()
 
 	case spinner.TickMsg, stopwatch.TickMsg, stopwatch.StartStopMsg:
@@ -210,7 +218,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if m.exitReport != "" {
+	if m.quitting {
 		return m.exitReport
 	}
 	return m.renderLayout()

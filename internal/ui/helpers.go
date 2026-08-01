@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/dirgaa/bloathog/internal/ui/components"
 	"fmt"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,7 +14,15 @@ import (
 func (m *Model) quit() (tea.Model, tea.Cmd) {
 	m.quitting = true
 	monitor.KillProcess(m.cmd)
-	m.exitReport = components.RenderExitReport(m.stats, formatDuration(time.Since(m.startTime)), m.peakPrcs)
+	if len(m.graph) == 0 {
+		if m.ExitCode == 0 {
+			m.exitReport = strings.Join(m.logs, "\n")
+		} else {
+			m.exitReport = ""
+		}
+	} else {
+		m.exitReport = components.RenderExitReport(m.stats, formatDuration(time.Since(m.startTime)), m.peakPrcs)
+	}
 	return m, tea.Sequence(m.header.Stop(), tea.Quit)
 }
 

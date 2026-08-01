@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/dirgaa/bloathog/internal/ui/types"
 	"fmt"
 	"os"
 	"strings"
@@ -9,29 +8,29 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/dirgaa/bloathog/internal/detect"
-
 	"github.com/dirgaa/bloathog/internal/ui"
+	"github.com/dirgaa/bloathog/internal/ui/types"
 )
 
-func fatal(err error) {
-	msg := err.Error()
-	if strings.HasPrefix(msg, "Usage:") {
-		fmt.Printf("\n  %s\n\n", msg)
-		os.Exit(0)
-	}
-	fmt.Fprintf(os.Stderr, "\n  \033[31mERROR:\033[0m %s\n\n", msg)
-	os.Exit(1)
+func main() {
+	os.Exit(run())
 }
 
-func main() {
+func run() int {
 	cwd, err := os.Getwd()
 	if err != nil {
-		fatal(err)
+		fmt.Fprint(os.Stderr, ui.RenderError(err))
+		return 1
 	}
 
 	result, err := detect.Detect(cwd, os.Args[1:])
 	if err != nil {
-		fatal(err)
+		if strings.HasPrefix(err.Error(), "Usage:") {
+			fmt.Printf("\n  %s\n\n", err.Error())
+			return 0
+		}
+		fmt.Fprint(os.Stderr, ui.RenderError(err))
+		return 1
 	}
 
 	p := tea.NewProgram(ui.NewModel(types.ProjectInfo{
@@ -44,12 +43,24 @@ func main() {
 
 	m, err := p.Run()
 	if err != nil {
-		fatal(fmt.Errorf("bloathog error: %w", err))
+		fmt.Fprint(os.Stderr, ui.RenderError(fmt.Errorf("bloathog error: %w", err)))
+		return 1
 	}
 
 	if final, ok := m.(ui.Model); ok {
+		if final.FatalErr != nil {
+			fmt.Fprint(os.Stderr, ui.RenderError(final.FatalErr))
+			code := final.ExitCode
+			if code == 0 {
+				code = 1
+			}
+			return code
+		}
 		if report := final.View(); report != "" {
 			fmt.Println(report)
 		}
+		return final.ExitCode
 	}
+
+	return 0
 }
