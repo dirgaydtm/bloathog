@@ -191,11 +191,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			rawLogs := ring.Join(m.logs, "\n")
 			m.FatalErr = &eror.Error{Msg: fmt.Sprintf("command '%s' failed to start properly\n%s", m.projectInfo.Command, rawLogs)}
 		}
-		return m.quit()
+		return m.finalizeQuit()
 
 	case monitor.ErrorMsg:
 		m.FatalErr = msg.Err
-		return m.quit()
+		return m.finalizeQuit()
 
 	case spinner.TickMsg, stopwatch.TickMsg, stopwatch.StartStopMsg:
 		var cmd tea.Cmd
