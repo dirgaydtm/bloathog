@@ -33,13 +33,13 @@
 
 ## What is Bloathog?
 
-`bloathog` is a fast, interactive CLI tool based on **Go** and **Bubble Tea** for real-time resource monitoring. 
+`bloathog` is a fast, interactive CLI tool based on **Go** and **Bubble Tea** for real-time resource monitoring.
 
 It wraps your command (like `npm run dev` or `go run main.go`), spawning it as a child process. It then continuously monitors the entire OS process tree originating from that command, accurately aggregating the combined RAM (RSS) and CPU footprint of the parent and all its child processes in real-time.
 
 ## Why Bloathog?
 
-Modern development tools (especially in the JavaScript/TypeScript ecosystem with tools like Next.js, Webpack, and Vite) tend to spawn dozens of worker threads and detached background processes. 
+Modern development tools (especially in the JavaScript/TypeScript ecosystem with tools like Next.js, Webpack, and Vite) tend to spawn dozens of worker threads and detached background processes.
 
 Standard monitoring tools like `top` or `htop` only show memory usage per individual PID. This makes it incredibly difficult to understand the **true total memory cost** of running your development server. `bloathog` solves this by natively tracking the entire process tree down to the last leaf, giving you the real, aggregate number.
 
@@ -125,6 +125,13 @@ bloathog php -S localhost:8000
 ## Contributing
 
 Contributions are welcome! If you find a bug or have a feature request, please [open an issue](https://github.com/dirgaa/bloathog/issues) or submit a Pull Request.
+
+To ensure code quality and consistency, we use [Lefthook](https://github.com/evilmartians/lefthook) to manage Git hooks (formatting and linting).
+Because this project uses Go 1.24+ tool tracking, you don't need to install anything globally! Simply setup the local hooks by running:
+
+```bash
+go tool lefthook install
+```
 
 Please read our [Architecture Guide](docs/ARCHITECTURE.md) to understand the internal design before submitting code changes.
 

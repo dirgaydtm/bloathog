@@ -1,0 +1,33 @@
+# lefthook.yml
+
+pre-commit:
+  parallel: true
+  commands:
+    format-and-import:
+      glob: "*.go"
+      run: if command -v goimports >/dev/null 2>&1; then goimports -w {staged_files}; else gofmt -l -w {staged_files}; fi
+      stage_fixed: true
+
+    go-vet:
+      glob: "*.go"
+      run: go vet ./...
+
+    golangci-lint:
+      glob: "*.go"
+      run: if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run; else echo "golangci-lint not installed, skipping..."; fi
+
+    go-mod-tidy:
+      glob: "go.{mod,sum}"
+      run: go mod tidy && git add go.mod go.sum
+
+commit-msg:
+  commands:
+    conventional-commits:
+      run: |
+        awk 'NR==1{if(!match($0, /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,72}/)){print "\n❌ Invalid commit message format. Please follow Conventional Commits (e.g., feat(detect): add feature)."; exit 1}}' {1}
+
+pre-push:
+  parallel: true
+  commands:
+    go-build:
+      run: go build -v ./cmd/...
