@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/dirgaa/bloathog/internal/ring"
 	"github.com/dirgaa/bloathog/internal/ui/components"
 	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"github.com/dirgaa/bloathog/internal/ui/types"
@@ -13,15 +14,27 @@ func (m Model) renderLayout() string {
 	var activeKeys help.KeyMap
 	if m.focusTarget == focusGraph {
 		activeKeys = types.GraphKeyMap{KeyMap: m.keys}
+	} else if m.focusTarget == focusLog {
+		activeKeys = types.LogKeyMap{KeyMap: m.keys, InputMode: m.inputMode}
 	} else {
-		activeKeys = types.ScrollKeyMap{KeyMap: m.keys}
+		activeKeys = types.ProcKeyMap{KeyMap: m.keys}
+	}
+
+	var bottomSection string
+	if m.inputMode {
+		bottomSection = lipgloss.JoinVertical(lipgloss.Left,
+			m.textInput.View(),
+			components.RenderHelpBar(m.helpModel, activeKeys, m.width),
+		)
+	} else {
+		bottomSection = components.RenderHelpBar(m.helpModel, activeKeys, m.width)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		m.header.View(m.stats, m.width),
+		m.header.View(m.stats, m.inputMode, m.width),
 		m.renderGraphAndProc(),
 		m.logPanel.View(),
-		components.RenderHelpBar(m.helpModel, activeKeys, m.width),
+		bottomSection,
 	)
 }
 
@@ -34,13 +47,13 @@ func (m Model) renderGraphAndProc() string {
 	leftCol := m.procPanel.View()
 
 	isGraphFocused := m.focusTarget == focusGraph
-	
+
 	var graphHeaderTitle string
-	var graphData []float64
-	
+	var graphData *ring.Buffer[float64]
+
 	ramTitle := "RAM Usage (MB)"
 	cpuTitle := "CPU Usage (%)"
-	
+
 	if m.activeGraph == 0 {
 		graphHeaderTitle = theme.StyleAccent.Render(ramTitle) + " │ " + theme.StyleMuted.Render(cpuTitle)
 		graphData = m.graph
@@ -48,9 +61,9 @@ func (m Model) renderGraphAndProc() string {
 		graphHeaderTitle = theme.StyleMuted.Render(ramTitle) + " │ " + theme.StyleAccent.Render(cpuTitle)
 		graphData = m.cpuGraph
 	}
-	
+
 	graphHeader := components.RenderTitle(graphHeaderTitle, graphW, isGraphFocused)
-	
+
 	panelStyle := theme.StylePanel
 	if isGraphFocused {
 		panelStyle = theme.StylePanelFocused

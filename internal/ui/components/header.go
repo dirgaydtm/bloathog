@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	
+
 	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"github.com/dirgaa/bloathog/internal/ui/types"
 )
@@ -26,9 +26,9 @@ func NewHeaderModel(cmdStr string) HeaderModel {
 	sp.Style = lipgloss.NewStyle().Foreground(theme.ColorAccent)
 
 	return HeaderModel{
-		sp:      sp,
-		sw:      stopwatch.NewWithInterval(time.Second),
-		CmdStr:  cmdStr,
+		sp:     sp,
+		sw:     stopwatch.NewWithInterval(time.Second),
+		CmdStr: cmdStr,
 	}
 }
 
@@ -67,13 +67,15 @@ func (m *HeaderModel) Update(msg tea.Msg) (HeaderModel, tea.Cmd) {
 	return *m, tea.Batch(cmds...)
 }
 
-func (m HeaderModel) View(stats types.MonitorState, width int) string {
+func (m HeaderModel) View(stats types.MonitorState, inputMode bool, width int) string {
 	var status string
-	if !m.started {
+	timer := theme.StyleMuted.Render("⏱ " + m.sw.View())
+	if inputMode {
+		status = theme.StyleWarning.Render("●") + " input    " + timer
+	} else if !m.started {
 		status = m.sp.View() + " starting…"
 	} else {
-		status = theme.StyleSuccess.Render("●") + " running  " +
-			theme.StyleMuted.Render("⏱ "+m.sw.View())
+		status = theme.StyleSuccess.Render("●") + " running  " + timer
 	}
 
 	statsStr := fmt.Sprintf("RAM: %.1fMB (Peak: %.1fMB) │ CPU: %.1f%% (Peak: %.1f%%)",
@@ -81,12 +83,12 @@ func (m HeaderModel) View(stats types.MonitorState, width int) string {
 		stats.CurrentCPU, stats.PeakCPU)
 
 	left := theme.StyleAccent.Render("bloathog") + "  " + theme.StyleSuccess.Render(m.CmdStr)
-	
+
 	leftW := lipgloss.Width(left)
 	statusW := lipgloss.Width(status)
-	
-	contentW := width - 2 
-	availableW := contentW - leftW - statusW - 4 
+
+	contentW := width - 2
+	availableW := contentW - leftW - statusW - 4
 	if availableW < 0 {
 		availableW = 0
 	}
@@ -102,7 +104,7 @@ func (m HeaderModel) View(stats types.MonitorState, width int) string {
 			centerTxt = ""
 		}
 	}
-	
+
 	centerStyled := theme.StyleLabel.Render(centerTxt)
 
 	spacerL := (contentW - leftW - statusW - lipgloss.Width(centerStyled)) / 2

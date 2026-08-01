@@ -1,9 +1,10 @@
 package detect
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/dirgaa/bloathog/internal/eror"
 
 	"github.com/tidwall/gjson"
 )
@@ -19,7 +20,7 @@ func FindDevScript(dir string) (string, error) {
 		if script := gjson.GetBytes(data, "scripts.start").String(); script != "" {
 			return "start", nil
 		}
-		return "", fmt.Errorf("%w\n\nTip: run with a manual command:\n  bloathog <cmd>", ErrNoDevScript)
+		return "", &eror.Error{Msg: ErrNoDevScript.Error(), Tip: "run with a manual command:\n  bloathog <cmd>"}
 	}
 
 	// Try deno.json
@@ -31,8 +32,8 @@ func FindDevScript(dir string) (string, error) {
 		if script := gjson.GetBytes(data, "tasks.start").String(); script != "" {
 			return "start", nil
 		}
-		return "", fmt.Errorf("%w\n\nTip: run with a manual command:\n  bloathog <cmd>", ErrNoDevScript)
+		return "", &eror.Error{Msg: ErrNoDevScript.Error(), Tip: "run with a manual command:\n  bloathog <cmd>"}
 	}
 
-	return "", fmt.Errorf("%w\n\nTip: run with a manual command:\n  bloathog <cmd>", ErrNoPackageJSON)
+	return "", &eror.Error{Msg: ErrNoPackageJSON.Error(), Tip: "run with a manual command:\n  bloathog <cmd>"}
 }

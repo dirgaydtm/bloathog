@@ -1,7 +1,6 @@
 package components
 
 import (
-	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"fmt"
 	"io"
 	"strings"
@@ -9,11 +8,11 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/dirgaa/bloathog/internal/proc"
+	"github.com/dirgaa/bloathog/internal/ui/theme"
 )
 
-// processItem wraps proc.ProcessNode and its pre-calculated lipgloss tree prefix.
+// processItem wraps a process node and its visual prefix.
 type processItem struct {
 	node   proc.ProcessNode
 	prefix string
@@ -21,10 +20,10 @@ type processItem struct {
 
 func (p processItem) FilterValue() string { return p.node.Name }
 
-// processDelegate is a custom list.ItemDelegate for process nodes.
+// processDelegate renders process nodes in a list.
 type processDelegate struct{}
 
-// Package-level styles to avoid allocating new lipgloss.Style objects on every render call.
+// Pre-defined styles to save memory.
 var (
 	treeStyleName = lipgloss.NewStyle().Foreground(theme.ColorText)
 	treeStyleRSS  = lipgloss.NewStyle().Foreground(theme.ColorAccent)
@@ -41,8 +40,8 @@ func (d processDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	}
 
 	indent := pi.prefix
-	
-	// Create second line indent: replace branching chars with vertical or space chars
+
+	// Indent the second line to match the first.
 	indent2 := strings.ReplaceAll(indent, "├─ ", "│  ")
 	indent2 = strings.ReplaceAll(indent2, "└─ ", "   ")
 
@@ -62,8 +61,7 @@ func (d processDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	}
 
 	name := pi.node.Name
-	// Optional: we don't need intense truncation logic here since it's on its own line,
-	// but we'll apply it just in case name is ridiculously long.
+	// Truncate name if it's too long for the screen.
 	maxNameW := m.Width() - lipgloss.Width(indent) - lipgloss.Width(pidStr) - 2
 	if lipgloss.Width(name) > maxNameW && maxNameW > 3 {
 		runes := []rune(name)
@@ -74,17 +72,17 @@ func (d processDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 	line1 := fmt.Sprintf("%s%s %s", indent, nameStyle.Render(name), treeStylePID.Render(pidStr))
 	line2 := fmt.Sprintf("%s%s  %s CPU", indent2, rssStyle.Render(rssStr), treeStylePID.Render(cpuStr))
-	
+
 	fmt.Fprintf(w, "%s\n%s", line1, line2)
 }
 
-// ProcessTreePanel is a bubbles/list panel showing the live process tree.
+// ProcessTreePanel displays the process tree UI.
 type ProcessTreePanel struct {
 	list    list.Model
 	focused bool
 }
 
-// NewProcessTreePanel creates a process tree panel with given dimensions.
+// NewProcessTreePanel creates a new panel.
 func NewProcessTreePanel(width, height int) ProcessTreePanel {
 	l := list.New(nil, processDelegate{}, width, height)
 	l.SetShowTitle(false)
@@ -95,54 +93,42 @@ func NewProcessTreePanel(width, height int) ProcessTreePanel {
 	return ProcessTreePanel{list: l}
 }
 
-// SetSize resizes the panel.
+// SetSize changes the panel dimensions.
 func (p *ProcessTreePanel) SetSize(width, height int) { p.list.SetSize(width, height) }
 
-// SetFocused sets whether this panel has keyboard focus.
+// SetFocused toggles keyboard focus.
 func (p *ProcessTreePanel) SetFocused(focused bool) { p.focused = focused }
 
-// UpdateNodes replaces the displayed process nodes.
+// UpdateNodes refreshes the process list.
 func (p *ProcessTreePanel) UpdateNodes(nodes []proc.ProcessNode) {
 	if len(nodes) == 0 {
 		p.list.SetItems(nil)
 		return
 	}
 
-	// Use lipgloss/tree to pre-calculate the perfect indentation strings for each node.
-	// We use "." as a placeholder for the actual content.
-	root := tree.Root(".")
-	stack := []*tree.Tree{root}
-
-	for i := 1; i < len(nodes); i++ {
-		n := nodes[i]
-		if n.Depth <= len(stack) && n.Depth > 0 {
-			stack = stack[:n.Depth]
-		}
-		parent := stack[len(stack)-1]
-		child := tree.Root(".")
-		parent.Child(child)
-		stack = append(stack, child)
-	}
-
-	lines := strings.Split(root.String(), "\n")
-
 	items := make([]list.Item, len(nodes))
 	for i, n := range nodes {
 		prefix := ""
-		if i < len(lines) {
-			prefix = strings.TrimSuffix(lines[i], ".")
-			// Compress the tree indentation to save horizontal space
-			prefix = strings.ReplaceAll(prefix, "├── ", "├─ ")
-			prefix = strings.ReplaceAll(prefix, "└── ", "└─ ")
-			prefix = strings.ReplaceAll(prefix, "│   ", "│  ")
-			prefix = strings.ReplaceAll(prefix, "    ", "   ")
+		if n.Depth > 0 && len(n.IsLast) >= n.Depth {
+			for _, isLast := range n.IsLast[:n.Depth-1] {
+				if isLast {
+					prefix += "   "
+				} else {
+					prefix += "│  "
+				}
+			}
+			if n.IsLast[n.Depth-1] {
+				prefix += "└─ "
+			} else {
+				prefix += "├─ "
+			}
 		}
 		items[i] = processItem{node: n, prefix: prefix}
 	}
 	p.list.SetItems(items)
 }
 
-// View renders the panel with title and border.
+// View draws the panel.
 func (p *ProcessTreePanel) View() string {
 	header := RenderTitle("Process Tree", p.list.Width()+4, p.focused)
 
@@ -159,19 +145,19 @@ func (p *ProcessTreePanel) View() string {
 	)
 }
 
-// ScrollUp moves the cursor up.
+// ScrollUp moves selection up.
 func (p *ProcessTreePanel) ScrollUp(n int) {
 	for i := 0; i < n; i++ {
 		p.list.CursorUp()
 	}
 }
 
-// ScrollDown moves the cursor down.
+// ScrollDown moves selection down.
 func (p *ProcessTreePanel) ScrollDown(n int) {
 	for i := 0; i < n; i++ {
 		p.list.CursorDown()
 	}
 }
 
-// Update passes a tea.Msg to the underlying list (useful for mouse clicks).
+// Update handles UI events like mouse clicks.
 func (p *ProcessTreePanel) Update(msg tea.Msg) { p.list, _ = p.list.Update(msg) }

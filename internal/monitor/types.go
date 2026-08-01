@@ -14,6 +14,7 @@ import (
 type InternalStartMsg struct {
 	RootPID int32
 	Cmd     *exec.Cmd
+	Stdin   io.WriteCloser
 	Stdout  io.Reader
 	Stderr  io.Reader
 }

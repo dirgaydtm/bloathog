@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+
+	"github.com/dirgaa/bloathog/internal/eror"
 )
 
 const usageText = "Usage:\n  bloathog              # auto-detect\n  bloathog <cmd>        # manual mode"
@@ -18,7 +20,7 @@ func ParseArgs(args []string) ([]string, error) {
 		if err == flag.ErrHelp {
 			return nil, fmt.Errorf(usageText)
 		}
-		return nil, fmt.Errorf("unknown flag provided\n\n%s", usageText)
+		return nil, &eror.Error{Msg: "unknown flag provided", Tip: usageText}
 	}
 
 	return fs.Args(), nil
