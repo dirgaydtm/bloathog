@@ -19,7 +19,7 @@ func (m *Model) relayout() {
 }
 
 func (m Model) graphHeight() int {
-	available := m.height - 2 // reserved for header (1) + help (1)
+	available := m.height - 2 // reserved for header (1) + short help (1)
 	
 	target := 19
 	maxAllowed := int(float64(available) * 0.6) // max 60% of available height
@@ -35,7 +35,7 @@ func (m Model) graphHeight() int {
 }
 
 func (m Model) logPanelHeight() int {
-	reserved := 2                // header (1 line) + help (1 line)
+	reserved := 2                // header (1 line) + short help (1 line)
 	reserved += m.graphHeight()  // graph panel with border
 	h := m.height - reserved
 	if h < 3 {

@@ -58,7 +58,6 @@ type Model struct {
 	width    int
 	height   int
 	procW    int // cached panel width, set in relayout()
-	showHelp bool
 
 	// Exit state
 	exitReport string
@@ -118,9 +117,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focusTarget = (m.focusTarget + 1) % focusCount
 			m.logPanel.SetFocused(m.focusTarget == focusLog)
 			m.procPanel.SetFocused(m.focusTarget == focusProc)
-		case key.Matches(msg, m.keys.Help):
-			m.showHelp = !m.showHelp
-			m.helpModel.ShowAll = m.showHelp
 		case key.Matches(msg, m.keys.Up):
 			switch m.focusTarget {
 			case focusLog:

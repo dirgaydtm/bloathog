@@ -8,7 +8,6 @@ type KeyMap struct {
 	Down        key.Binding
 	SwitchGraph key.Binding
 	Tab         key.Binding
-	Help        key.Binding
 	Quit        key.Binding
 }
 
@@ -24,8 +23,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp(" ↓/→ ", "scroll down"),
 		),
 		SwitchGraph: key.NewBinding(
-			key.WithKeys("left", "right", "h", "l"),
-			key.WithHelp(" ←/→ ", "switch graph"),
+			key.WithKeys("h", "l", "[", "]"),
+			key.WithHelp(" h/l ", "switch graph"),
 		),
 		Tab: key.NewBinding(
 			key.WithKeys("tab"),
