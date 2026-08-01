@@ -1,0 +1,25 @@
+{
+  "name": "bloathog",
+  "version": "0.1.0",
+  "description": "Wrap your dev server. Watch it eat RAM and CPU. In real time.",
+  "bin": {
+    "bloathog": "npm/run.js"
+  },
+  "scripts": {
+    "postinstall": "node npm/install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dirgaa/bloathog.git"
+  },
+  "keywords": [
+    "cli",
+    "monitor",
+    "memory",
+    "cpu",
+    "process",
+    "golang"
+  ],
+  "author": "Dirgayuditama",
+  "license": "MIT"
+}
