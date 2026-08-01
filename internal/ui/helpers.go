@@ -1,22 +1,21 @@
 package ui
 
 import (
-	"github.com/dirgaa/bloathog/internal/ui/components"
 	"fmt"
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/dirgaa/bloathog/internal/monitor"
+	"github.com/dirgaa/bloathog/internal/ring"
+	"github.com/dirgaa/bloathog/internal/ui/components"
 )
 
 func (m *Model) quit() (tea.Model, tea.Cmd) {
 	m.quitting = true
 	monitor.KillProcess(m.cmd)
-	if len(m.graph) == 0 {
+	if m.graph.Len() == 0 {
 		if m.ExitCode == 0 {
-			m.exitReport = strings.Join(m.logs, "\n")
+			m.exitReport = ring.Join(m.logs, "\n")
 		} else {
 			m.exitReport = ""
 		}

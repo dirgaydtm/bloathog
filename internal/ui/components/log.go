@@ -1,8 +1,8 @@
 package components
 
 import (
+	"github.com/dirgaa/bloathog/internal/ring"
 	"github.com/dirgaa/bloathog/internal/ui/theme"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
@@ -30,11 +30,11 @@ func (lp *LogPanel) SetSize(width, height int) {
 // SetFocused sets whether this panel has keyboard focus.
 func (lp *LogPanel) SetFocused(focused bool) { lp.focused = focused }
 
-func (lp *LogPanel) UpdateContent(lines []string) {
+func (lp *LogPanel) UpdateContent(buffer *ring.Buffer[string]) {
 	isAtBottom := lp.vp.AtBottom()
-	content := strings.Join(lines, "\n")
+	content := ring.Join(buffer, "\n")
 	lp.vp.SetContent(content)
-	if isAtBottom || len(lines) == 1 {
+	if isAtBottom || buffer.Len() == 1 {
 		lp.vp.GotoBottom()
 	}
 }

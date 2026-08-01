@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/dirgaa/bloathog/internal/ring"
 	"github.com/dirgaa/bloathog/internal/ui/components"
 	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"github.com/dirgaa/bloathog/internal/ui/types"
@@ -34,13 +35,13 @@ func (m Model) renderGraphAndProc() string {
 	leftCol := m.procPanel.View()
 
 	isGraphFocused := m.focusTarget == focusGraph
-	
+
 	var graphHeaderTitle string
-	var graphData []float64
-	
+	var graphData *ring.Buffer[float64]
+
 	ramTitle := "RAM Usage (MB)"
 	cpuTitle := "CPU Usage (%)"
-	
+
 	if m.activeGraph == 0 {
 		graphHeaderTitle = theme.StyleAccent.Render(ramTitle) + " │ " + theme.StyleMuted.Render(cpuTitle)
 		graphData = m.graph
@@ -48,9 +49,9 @@ func (m Model) renderGraphAndProc() string {
 		graphHeaderTitle = theme.StyleMuted.Render(ramTitle) + " │ " + theme.StyleAccent.Render(cpuTitle)
 		graphData = m.cpuGraph
 	}
-	
+
 	graphHeader := components.RenderTitle(graphHeaderTitle, graphW, isGraphFocused)
-	
+
 	panelStyle := theme.StylePanel
 	if isGraphFocused {
 		panelStyle = theme.StylePanelFocused

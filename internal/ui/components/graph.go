@@ -1,6 +1,9 @@
 package components
 
-import "github.com/guptarohit/asciigraph"
+import (
+	"github.com/dirgaa/bloathog/internal/ring"
+	"github.com/guptarohit/asciigraph"
+)
 
 var steppedBounds = []float64{100, 250, 500, 1024, 2048, 4096, 8192, 16384, 32768, 65536}
 
@@ -15,9 +18,12 @@ func getSteppedUpperBound(maxVal float64) float64 {
 
 // RenderGraph renders the RAM or CPU usage graph using asciigraph.
 // activeGraph: 0 for RAM, 1 for CPU
-func RenderGraph(data []float64, width, height int, activeGraph int) string {
-	if len(data) == 0 {
+func RenderGraph(buffer *ring.Buffer[float64], width, height int, activeGraph int) string {
+	var data []float64
+	if buffer == nil || buffer.Len() == 0 {
 		data = []float64{0}
+	} else {
+		data = buffer.Items()
 	}
 	if width < 10 {
 		width = 10

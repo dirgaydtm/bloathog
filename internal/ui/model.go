@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/dirgaa/bloathog/internal/eror"
 	"github.com/dirgaa/bloathog/internal/monitor"
+	"github.com/dirgaa/bloathog/internal/ring"
 	"github.com/dirgaa/bloathog/internal/ui/components"
 	"github.com/dirgaa/bloathog/internal/ui/types"
 )
@@ -44,10 +44,10 @@ type Model struct {
 	peakPrcs int
 
 	// Dynamic buffers
-	graph       []float64
-	cpuGraph    []float64
+	graph       *ring.Buffer[float64]
+	cpuGraph    *ring.Buffer[float64]
 	activeGraph int // 0 = RAM, 1 = CPU
-	logs        []string
+	logs        *ring.Buffer[string]
 	logDirty    bool
 
 	// UI components
@@ -86,6 +86,9 @@ func NewModel(info types.ProjectInfo) tea.Model {
 		focusTarget: focusLog,
 		logPanel:    components.NewLogPanel(80, 10),
 		procPanel:   components.NewProcessTreePanel(40, 10),
+		graph:       ring.New[float64](maxGraphSamples),
+		cpuGraph:    ring.New[float64](maxGraphSamples),
+		logs:        ring.New[string](maxLogLines),
 	}
 
 	m.logPanel.SetFocused(true)
@@ -163,10 +166,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Stats.ProcessCount > m.peakPrcs {
 				m.peakPrcs = msg.Stats.ProcessCount
 			}
-			m.graph = append(m.graph, float64(rss)/(1024*1024))
-			if len(m.graph) > maxGraphSamples {
-				m.graph = m.graph[1:]
-			}
+			m.graph.Push(float64(rss) / (1024 * 1024))
 
 			cpu := msg.Stats.TotalCPU
 			m.stats.CurrentCPU = cpu
@@ -174,27 +174,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.stats.PeakCPU = cpu
 			}
 			m.stats.RunningSumCPU += cpu
-			m.cpuGraph = append(m.cpuGraph, cpu)
-			if len(m.cpuGraph) > maxGraphSamples {
-				m.cpuGraph = m.cpuGraph[1:]
-			}
+			m.cpuGraph.Push(cpu)
 
 			m.procPanel.UpdateNodes(msg.Stats.Nodes)
 			cmds = append(cmds, monitor.TickCmd(m.rootPID))
 		}
 
 	case nextLineWithChanMsg:
-		m.logs = append(m.logs, formatLogLine(msg.msg))
-		if len(m.logs) > maxLogLines {
-			m.logs = m.logs[1:]
-		}
+		m.logs.Push(formatLogLine(msg.msg))
 		m.logDirty = true
 		cmds = append(cmds, drainCmd(msg.ch))
 
 	case monitor.ChildExitMsg:
 		m.ExitCode = msg.ExitCode
-		if m.ExitCode != 0 && len(m.graph) == 0 {
-			rawLogs := strings.Join(m.logs, "\n")
+		if m.ExitCode != 0 && m.graph.Len() == 0 {
+			rawLogs := ring.Join(m.logs, "\n")
 			m.FatalErr = &eror.Error{Msg: fmt.Sprintf("command '%s' failed to start properly\n%s", m.projectInfo.Command, rawLogs)}
 		}
 		return m.quit()
