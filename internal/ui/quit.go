@@ -31,7 +31,7 @@ func (m Model) finalizeQuit() (tea.Model, tea.Cmd) {
 			m.exitReport = ""
 		}
 	} else {
-		m.exitReport = components.RenderExitReport(m.stats, time.Since(m.startTime).Round(time.Second).String(), m.peakPrcs)
+		m.exitReport = components.RenderExitReport(m.stats, time.Since(m.startTime).Round(time.Second).String(), m.stats.PeakProcesses)
 	}
 	return m, tea.Sequence(m.header.Stop(), tea.Quit)
 }

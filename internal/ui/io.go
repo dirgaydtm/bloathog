@@ -11,7 +11,13 @@ import (
 	"github.com/dirgaa/bloathog/internal/ui/theme"
 )
 
-// formatLogLine prefixes stderr lines with a warning indicator.
+// logBatchMsg carries a batch of logs.
+type logBatchMsg struct {
+	msgs []monitor.LogMsg
+	ch   <-chan monitor.LogMsg
+}
+
+// formatLogLine adds a warning mark to stderr.
 func formatLogLine(msg monitor.LogMsg) string {
 	if msg.IsStderr {
 		return theme.StyleWarning.Render("!") + " " + msg.Line
@@ -19,8 +25,7 @@ func formatLogLine(msg monitor.LogMsg) string {
 	return "  " + msg.Line
 }
 
-// readLinesCmd starts a goroutine that reads all lines from r into a channel,
-// then returns a drainCmd to pull them into the tea event loop one by one.
+// readLinesCmd streams lines from a reader into a channel.
 func readLinesCmd(r io.Reader, isStderr bool) tea.Cmd {
 	ch := make(chan monitor.LogMsg, 256)
 	go func() {
@@ -37,20 +42,31 @@ func readLinesCmd(r io.Reader, isStderr bool) tea.Cmd {
 	return drainCmd(ch)
 }
 
-// drainCmd reads one LogMsg from the channel and schedules itself to continue.
+// drainCmd reads up to 100 log lines at once for performance.
 func drainCmd(ch <-chan monitor.LogMsg) tea.Cmd {
 	return func() tea.Msg {
 		msg, ok := <-ch
 		if !ok {
-			return nil // channel closed, stop draining
+			return nil
 		}
-		// Return the log message; the Update handler will call drainCmd again
-		// via nextLineMsg
-		return nextLineWithChanMsg{msg: msg, ch: ch}
+
+		batch := []monitor.LogMsg{msg}
+		for i := 0; i < 99; i++ {
+			select {
+			case m, ok := <-ch:
+				if !ok {
+					return logBatchMsg{msgs: batch, ch: ch}
+				}
+				batch = append(batch, m)
+			default:
+				return logBatchMsg{msgs: batch, ch: ch}
+			}
+		}
+		return logBatchMsg{msgs: batch, ch: ch}
 	}
 }
 
-// waitCmd waits for the child process to exit and sends ChildExitMsg.
+// waitCmd waits for child process exit.
 func waitCmd(cmd *exec.Cmd) tea.Cmd {
 	return func() tea.Msg {
 		err := cmd.Wait()
@@ -62,10 +78,4 @@ func waitCmd(cmd *exec.Cmd) tea.Cmd {
 		}
 		return monitor.ChildExitMsg{ExitCode: code}
 	}
-}
-
-// nextLineWithChanMsg carries a log line AND the channel to continue draining.
-type nextLineWithChanMsg struct {
-	msg monitor.LogMsg
-	ch  <-chan monitor.LogMsg
 }

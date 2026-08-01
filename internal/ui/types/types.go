@@ -2,13 +2,13 @@ package types
 
 import "time"
 
-// MemorySample represents a single RSS measurement at a point in time.
+// MemorySample represents a single RSS measurement.
 type MemorySample struct {
 	Timestamp time.Time
 	RSS       uint64 // bytes
 }
 
-// MonitorState holds the current monitoring statistics.
+// MonitorState holds current stats.
 type MonitorState struct {
 	CurrentRSS      uint64
 	PeakRSS         uint64
@@ -16,13 +16,13 @@ type MonitorState struct {
 	CurrentCPU      float64
 	PeakCPU         float64
 	RunningSumCPU   float64
+	SmoothedCPU     float64
 	SampleCount     uint64
 	ActiveProcesses int
-	GraphBuffer     []float64 // ring buffer values in MB, up to 120 entries
-	LogBuffer       []string  // ring buffer, up to 5000 lines
+	PeakProcesses   int
 }
 
-// AverageRSSMB returns the average RSS in megabytes.
+// Returns the average RSS in megabytes.
 func (s MonitorState) AverageRSSMB() float64 {
 	if s.SampleCount == 0 {
 		return 0
@@ -30,7 +30,7 @@ func (s MonitorState) AverageRSSMB() float64 {
 	return (s.RunningSumRSS / float64(s.SampleCount)) / (1024 * 1024)
 }
 
-// AverageCPU returns the average CPU percentage.
+// Returns the average CPU percentage.
 func (s MonitorState) AverageCPU() float64 {
 	if s.SampleCount == 0 {
 		return 0
@@ -38,17 +38,17 @@ func (s MonitorState) AverageCPU() float64 {
 	return s.RunningSumCPU / float64(s.SampleCount)
 }
 
-// CurrentRSSMB returns the current RSS in megabytes.
+// Returns the current RSS in megabytes.
 func (s MonitorState) CurrentRSSMB() float64 {
 	return float64(s.CurrentRSS) / (1024 * 1024)
 }
 
-// PeakRSSMB returns the peak RSS in megabytes.
+// Returns the peak RSS in megabytes.
 func (s MonitorState) PeakRSSMB() float64 {
 	return float64(s.PeakRSS) / (1024 * 1024)
 }
 
-// ProjectInfo holds information about the project/command to run.
+// ProjectInfo holds project information.
 type ProjectInfo struct {
 	Command        string
 	Args           []string

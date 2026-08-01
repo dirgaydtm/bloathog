@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -28,7 +29,7 @@ const (
 	focusCount      = 3
 )
 
-// Model is the root Bubble Tea model for bloathog.
+// Model is the root app state.
 type Model struct {
 	projectInfo types.ProjectInfo
 
@@ -39,9 +40,8 @@ type Model struct {
 	quitting bool
 	ExitCode int
 
-	// Monitor state (streaming stats)
+	// Monitor state
 	stats    types.MonitorState
-	peakPrcs int
 
 	// Dynamic buffers
 	graph       *ring.Buffer[float64]
@@ -97,6 +97,7 @@ func NewModel(info types.ProjectInfo) tea.Model {
 }
 
 func (m Model) Init() tea.Cmd {
+	// Initialize header and start the background child process
 	return tea.Batch(m.header.Init(), monitor.SpawnCmd(m.projectInfo.Command, m.projectInfo.Args))
 }
 
@@ -111,7 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.relayout()
 
 	case tea.KeyMsg:
-		// Context-aware graph switching
+		// Switch graph
 		if m.focusTarget == focusGraph && key.Matches(msg, m.keys.SwitchGraph) {
 			m.activeGraph = 1 - m.activeGraph
 			return m, nil
@@ -141,6 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case monitor.InternalStartMsg:
+		// Process successfully started, store PID and begin ticking
 		m.cmd = msg.Cmd
 		m.rootPID = msg.RootPID
 		m.started = true
@@ -154,6 +156,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	case monitor.TickMsg:
+		// Process new monitor stats every tick
 		if !m.quitting {
 			rss := msg.Stats.TotalRSS
 			m.stats.CurrentRSS = rss
@@ -163,29 +166,40 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.stats.RunningSumRSS += float64(rss)
 			m.stats.SampleCount++
 			m.stats.ActiveProcesses = msg.Stats.ProcessCount
-			if msg.Stats.ProcessCount > m.peakPrcs {
-				m.peakPrcs = msg.Stats.ProcessCount
+			if msg.Stats.ProcessCount > m.stats.PeakProcesses {
+				m.stats.PeakProcesses = msg.Stats.ProcessCount
 			}
 			m.graph.Push(float64(rss) / (1024 * 1024))
 
-			cpu := msg.Stats.TotalCPU
+			cpu := msg.Stats.TotalCPU / float64(runtime.NumCPU())
 			m.stats.CurrentCPU = cpu
 			if cpu > m.stats.PeakCPU {
 				m.stats.PeakCPU = cpu
 			}
 			m.stats.RunningSumCPU += cpu
-			m.cpuGraph.Push(cpu)
+
+			// EMA Smoothing for CPU Graph
+			if cpu == 0 {
+				m.stats.SmoothedCPU = 0
+			} else {
+				m.stats.SmoothedCPU = (cpu * 0.4) + (m.stats.SmoothedCPU * 0.6)
+			}
+			m.cpuGraph.Push(m.stats.SmoothedCPU)
 
 			m.procPanel.UpdateNodes(msg.Stats.Nodes)
 			cmds = append(cmds, monitor.TickCmd(m.rootPID))
 		}
 
-	case nextLineWithChanMsg:
-		m.logs.Push(formatLogLine(msg.msg))
+	case logBatchMsg:
+		// Render batched lines to log panel
+		for _, logMsg := range msg.msgs {
+			m.logs.Push(formatLogLine(logMsg))
+		}
 		m.logDirty = true
 		cmds = append(cmds, drainCmd(msg.ch))
 
 	case monitor.ChildExitMsg:
+		// Handle exit code and start teardown
 		m.ExitCode = msg.ExitCode
 		if m.ExitCode != 0 && m.graph.Len() == 0 {
 			rawLogs := ring.Join(m.logs, "\n")
