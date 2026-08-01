@@ -8,21 +8,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/dirgaa/bloathog/internal/monitor"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
 )
 
 // logBatchMsg carries a batch of logs.
 type logBatchMsg struct {
 	msgs []monitor.LogMsg
 	ch   <-chan monitor.LogMsg
-}
-
-// formatLogLine adds a warning mark to stderr.
-func formatLogLine(msg monitor.LogMsg) string {
-	if msg.IsStderr {
-		return theme.StyleWarning.Render("!") + " " + msg.Line
-	}
-	return "  " + msg.Line
 }
 
 // readLinesCmd streams lines from a reader into a channel.

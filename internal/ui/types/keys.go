@@ -8,6 +8,8 @@ type KeyMap struct {
 	Down        key.Binding
 	SwitchGraph key.Binding
 	Tab         key.Binding
+	Enter       key.Binding
+	Esc         key.Binding
 	Quit        key.Binding
 }
 
@@ -30,6 +32,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("tab"),
 			key.WithHelp(" tab ", "switch panel"),
 		),
+		Enter: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp(" enter ", "input mode"),
+		),
+		Esc: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp(" esc ", "exit"),
+		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c", "Q", "ctrl+C"),
 			key.WithHelp(" q ", "quit"),
@@ -39,15 +49,37 @@ func DefaultKeyMap() KeyMap {
 
 // --- Dynamic KeyMap Wrappers ---
 
-// ScrollKeyMap is used when the Log or Proc panel is focused
-type ScrollKeyMap struct { KeyMap }
+// ProcKeyMap is used when the Proc panel is focused
+type ProcKeyMap struct { KeyMap }
 
-func (k ScrollKeyMap) ShortHelp() []key.Binding {
+func (k ProcKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Up, k.Down, k.Tab, k.Quit}
 }
-func (k ScrollKeyMap) FullHelp() [][]key.Binding {
+func (k ProcKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Tab, k.Quit},
+	}
+}
+
+// LogKeyMap is used when the Log panel is focused
+type LogKeyMap struct {
+	KeyMap
+	InputMode bool
+}
+
+func (k LogKeyMap) ShortHelp() []key.Binding {
+	if k.InputMode {
+		return []key.Binding{k.Esc}
+	}
+	return []key.Binding{k.Up, k.Down, k.Tab, k.Enter, k.Quit}
+}
+
+func (k LogKeyMap) FullHelp() [][]key.Binding {
+	if k.InputMode {
+		return [][]key.Binding{{k.Esc}}
+	}
+	return [][]key.Binding{
+		{k.Up, k.Down, k.Tab, k.Enter, k.Quit},
 	}
 }
 

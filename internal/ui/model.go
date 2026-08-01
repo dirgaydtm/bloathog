@@ -2,12 +2,15 @@ package ui
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"runtime"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -17,6 +20,7 @@ import (
 	"github.com/dirgaa/bloathog/internal/monitor"
 	"github.com/dirgaa/bloathog/internal/ring"
 	"github.com/dirgaa/bloathog/internal/ui/components"
+	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"github.com/dirgaa/bloathog/internal/ui/types"
 )
 
@@ -40,8 +44,13 @@ type Model struct {
 	quitting bool
 	ExitCode int
 
+	// Interactive state
+	stdin     io.WriteCloser
+	inputMode bool
+	textInput textinput.Model
+
 	// Monitor state
-	stats    types.MonitorState
+	stats types.MonitorState
 
 	// Dynamic buffers
 	graph       *ring.Buffer[float64]
@@ -71,7 +80,16 @@ type Model struct {
 
 func NewModel(info types.ProjectInfo) tea.Model {
 	h := help.New()
-	h.ShowAll = false
+	h.Styles.ShortKey = theme.StyleAccent
+	h.Styles.ShortDesc = theme.StyleMuted
+	h.Styles.ShortSeparator = theme.StyleMuted
+
+	// Initialize text input
+	ti := textinput.New()
+	ti.Placeholder = "Enter text to send..."
+	ti.Prompt = " > "
+	ti.PromptStyle = theme.StyleAccent
+	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 
 	cmdStr := info.Command
 	for _, a := range info.Args {
@@ -82,6 +100,7 @@ func NewModel(info types.ProjectInfo) tea.Model {
 		projectInfo: info,
 		header:      components.NewHeaderModel(cmdStr),
 		helpModel:   h,
+		textInput:   ti,
 		keys:        types.DefaultKeyMap(),
 		focusTarget: focusLog,
 		logPanel:    components.NewLogPanel(80, 10),
@@ -112,6 +131,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.relayout()
 
 	case tea.KeyMsg:
+		if m.inputMode {
+			switch msg.Type {
+			case tea.KeyEsc, tea.KeyEnter:
+				if msg.Type == tea.KeyEnter && m.stdin != nil {
+					m.logs.Push(">" + m.textInput.Value())
+					m.logDirty = true
+					io.WriteString(m.stdin, m.textInput.Value()+"\n")
+				}
+				m.inputMode = false
+				m.textInput.Reset()
+				m.relayout()
+				return m, nil
+			}
+
+			var cmd tea.Cmd
+			m.textInput, cmd = m.textInput.Update(msg)
+			return m, cmd
+		}
+
+		if m.focusTarget == focusLog && msg.Type == tea.KeyEnter {
+			m.inputMode = true
+			m.textInput.Focus()
+			m.relayout()
+			return m, textinput.Blink
+		}
+
 		// Switch graph
 		if m.focusTarget == focusGraph && key.Matches(msg, m.keys.SwitchGraph) {
 			m.activeGraph = 1 - m.activeGraph
@@ -145,6 +190,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Process successfully started, store PID and begin ticking
 		m.cmd = msg.Cmd
 		m.rootPID = msg.RootPID
+		m.stdin = msg.Stdin
 		m.started = true
 		m.startTime = time.Now()
 		cmds = append(cmds,
@@ -193,7 +239,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case logBatchMsg:
 		// Render batched lines to log panel
 		for _, logMsg := range msg.msgs {
-			m.logs.Push(formatLogLine(logMsg))
+			m.logs.Push(logMsg.Line)
 		}
 		m.logDirty = true
 		cmds = append(cmds, drainCmd(msg.ch))
@@ -220,6 +266,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.logDirty {
 		m.logPanel.UpdateContent(m.logs)
 		m.logDirty = false
+	}
+
+	if m.inputMode {
+		var cmd tea.Cmd
+		m.textInput, cmd = m.textInput.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)

@@ -35,8 +35,11 @@ func (m Model) graphHeight() int {
 }
 
 func (m Model) logPanelHeight() int {
-	reserved := 2                // header (1 line) + short help (1 line)
-	reserved += m.graphHeight()  // graph panel with border
+	reserved := 2               // header (1 line) + short help (1 line)
+	if m.inputMode {
+		reserved += 1           // text input (1 line)
+	}
+	reserved += m.graphHeight() // graph panel with border
 	h := m.height - reserved
 	if h < 3 {
 		h = 3
