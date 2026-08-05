@@ -1,13 +1,5 @@
 package types
 
-import "time"
-
-// MemorySample represents a single RSS measurement.
-type MemorySample struct {
-	Timestamp time.Time
-	RSS       uint64 // bytes
-}
-
 // MonitorState holds current stats.
 type MonitorState struct {
 	CurrentRSS      uint64
