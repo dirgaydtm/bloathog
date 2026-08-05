@@ -1,12 +1,8 @@
 package monitor
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
-	"syscall"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -17,10 +13,7 @@ func SpawnCmd(command string, args []string) tea.Cmd {
 	return func() tea.Msg {
 		cmd := exec.Command(command, args...)
 
-		// Unix: run in its own process group to kill the whole tree later
-		if runtime.GOOS != "windows" {
-			cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		}
+		setProcessGroup(cmd)
 
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
@@ -59,19 +52,5 @@ func KillProcess(cmd *exec.Cmd) {
 		return
 	}
 
-	if runtime.GOOS == "windows" {
-		killer := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", cmd.Process.Pid))
-		_ = killer.Run()
-		return
-	}
-
-	// Unix: kill the entire process group (negative PID = PGID)
-	pgid, err := syscall.Getpgid(cmd.Process.Pid)
-	if err == nil {
-		_ = syscall.Kill(-pgid, syscall.SIGTERM)
-		time.Sleep(200 * time.Millisecond)
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-	} else {
-		_ = cmd.Process.Signal(os.Interrupt)
-	}
+	killProcessGroup(cmd)
 }
