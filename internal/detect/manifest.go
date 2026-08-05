@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dirgaa/bloathog/internal/eror"
+	"github.com/dirgaydtm/bloathog/internal/eror"
 
 	"github.com/tidwall/gjson"
 )

@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/dirgaa/bloathog/internal/proc"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/proc"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 )
 
 // processItem wraps a process node and its visual prefix.

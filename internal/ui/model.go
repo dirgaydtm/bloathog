@@ -16,12 +16,12 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/dirgaa/bloathog/internal/eror"
-	"github.com/dirgaa/bloathog/internal/monitor"
-	"github.com/dirgaa/bloathog/internal/ring"
-	"github.com/dirgaa/bloathog/internal/ui/components"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
-	"github.com/dirgaa/bloathog/internal/ui/types"
+	"github.com/dirgaydtm/bloathog/internal/eror"
+	"github.com/dirgaydtm/bloathog/internal/monitor"
+	"github.com/dirgaydtm/bloathog/internal/ring"
+	"github.com/dirgaydtm/bloathog/internal/ui/components"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/ui/types"
 )
 
 const (

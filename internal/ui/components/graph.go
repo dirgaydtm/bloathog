@@ -1,7 +1,7 @@
 package components
 
 import (
-	"github.com/dirgaa/bloathog/internal/ring"
+	"github.com/dirgaydtm/bloathog/internal/ring"
 	"github.com/guptarohit/asciigraph"
 )
 

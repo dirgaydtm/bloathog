@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 )
 
 // RenderTitle creates a single-line embedded header that connects to a BorderTop(false) panel.

@@ -1,8 +1,8 @@
 package components
 
 import (
-	"github.com/dirgaa/bloathog/internal/ring"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/ring"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"

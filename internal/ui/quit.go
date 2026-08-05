@@ -4,9 +4,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/dirgaa/bloathog/internal/monitor"
-	"github.com/dirgaa/bloathog/internal/ring"
-	"github.com/dirgaa/bloathog/internal/ui/components"
+	"github.com/dirgaydtm/bloathog/internal/monitor"
+	"github.com/dirgaydtm/bloathog/internal/ring"
+	"github.com/dirgaydtm/bloathog/internal/ui/components"
 )
 
 // quit triggers background shutdown without closing the UI.

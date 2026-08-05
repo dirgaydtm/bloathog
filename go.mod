@@ -1,4 +1,4 @@
-module github.com/dirgaa/bloathog
+module github.com/dirgaydtm/bloathog
 
 go 1.26.4
 

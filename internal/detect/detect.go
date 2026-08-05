@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/dirgaa/bloathog/internal/eror"
+	"github.com/dirgaydtm/bloathog/internal/eror"
 )
 
 // Detect parses args for manual mode or auto-detects the project via manifests.

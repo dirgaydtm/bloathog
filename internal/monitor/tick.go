@@ -4,7 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/dirgaa/bloathog/internal/proc"
+	"github.com/dirgaydtm/bloathog/internal/proc"
 )
 
 const tickInterval = 500 * time.Millisecond

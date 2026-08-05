@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dirgaa/bloathog/internal/eror"
+	"github.com/dirgaydtm/bloathog/internal/eror"
 )
 
 const usageText = "Usage:\n  bloathog              # auto-detect\n  bloathog <cmd>        # manual mode"

@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/dirgaa/bloathog/internal/detect"
-	"github.com/dirgaa/bloathog/internal/ui"
-	"github.com/dirgaa/bloathog/internal/ui/types"
+	"github.com/dirgaydtm/bloathog/internal/detect"
+	"github.com/dirgaydtm/bloathog/internal/ui"
+	"github.com/dirgaydtm/bloathog/internal/ui/types"
 )
 
 func main() {

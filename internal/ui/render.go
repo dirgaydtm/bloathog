@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"github.com/dirgaa/bloathog/internal/ring"
-	"github.com/dirgaa/bloathog/internal/ui/components"
-	"github.com/dirgaa/bloathog/internal/ui/theme"
-	"github.com/dirgaa/bloathog/internal/ui/types"
+	"github.com/dirgaydtm/bloathog/internal/ring"
+	"github.com/dirgaydtm/bloathog/internal/ui/components"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/ui/types"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/lipgloss"

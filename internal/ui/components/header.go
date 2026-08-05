@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/dirgaa/bloathog/internal/ui/theme"
-	"github.com/dirgaa/bloathog/internal/ui/types"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
+	"github.com/dirgaydtm/bloathog/internal/ui/types"
 )
 
 type HeaderModel struct {
@@ -109,8 +109,12 @@ func (m HeaderModel) View(stats types.MonitorState, inputMode bool, width int) s
 
 	spacerL := (contentW - leftW - statusW - lipgloss.Width(centerStyled)) / 2
 	spacerR := contentW - leftW - statusW - lipgloss.Width(centerStyled) - spacerL
-	if spacerL < 0 { spacerL = 0 }
-	if spacerR < 0 { spacerR = 0 }
+	if spacerL < 0 {
+		spacerL = 0
+	}
+	if spacerR < 0 {
+		spacerR = 0
+	}
 
 	return lipgloss.NewStyle().
 		Width(width).

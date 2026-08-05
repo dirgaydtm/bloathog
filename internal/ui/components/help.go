@@ -1,9 +1,9 @@
 package components
 
 import (
-	"github.com/dirgaa/bloathog/internal/ui/theme"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 )
 
 // renderHelpBar renders the help footer using bubbles/help.

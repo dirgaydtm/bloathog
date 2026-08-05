@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/dirgaa/bloathog/internal/monitor"
+	"github.com/dirgaydtm/bloathog/internal/monitor"
 )
 
 // logBatchMsg carries a batch of logs.

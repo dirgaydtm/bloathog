@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dirgaa/bloathog/internal/eror"
+	"github.com/dirgaydtm/bloathog/internal/eror"
 )
 
 // RenderError takes any error and returns a styled string.

@@ -29,13 +29,13 @@ npm install -g bloathog
 ### with Go
 
 ```bash
-go install github.com/dirgaa/bloathog/cmd/bloathog@latest
+go install github.com/dirgaydtm/bloathog/cmd/bloathog@latest
 ```
 
 ### with cURL
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/dirgaa/bloathog/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/dirgaydtm/bloathog/main/install.sh | sh
 ```
 
 ## Usage

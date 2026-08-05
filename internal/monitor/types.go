@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/dirgaa/bloathog/internal/proc"
+	"github.com/dirgaydtm/bloathog/internal/proc"
 )
 
 // InternalStartMsg is sent when the child process has been successfully spawned.

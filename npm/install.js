@@ -21,7 +21,7 @@ if (!osName || !archName) {
 // Construct the download URL based on the OS and architecture
 const ext = osName === "Windows" ? "zip" : "tar.gz";
 const filename = `bloathog_${osName}_${archName}.${ext}`;
-const url = `https://github.com/dirgaa/bloathog/releases/download/v${version}/${filename}`;
+const url = `https://github.com/dirgaydtm/bloathog/releases/download/v${version}/${filename}`;
 
 const binDir = path.join(__dirname, "..", "bin");
 const archivePath = path.join(__dirname, filename);

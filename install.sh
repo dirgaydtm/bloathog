@@ -19,7 +19,7 @@ case "$ARCH" in
 esac
 
 # Latest release URL
-RELEASE_URL="https://github.com/dirgaa/bloathog/releases/latest/download"
+RELEASE_URL="https://github.com/dirgaydtm/bloathog/releases/latest/download"
 TAR_FILE="bloathog_${OS}_${ARCH}.tar.gz"
 
 echo "Downloading ${TAR_FILE}..."
