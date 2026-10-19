@@ -1,6 +1,10 @@
 package proc
 
-import "github.com/shirou/gopsutil/v3/process"
+import (
+	"slices"
+
+	"github.com/shirou/gopsutil/v3/process"
+)
 
 // TreeStats holds the aggregate result of a process tree scan.
 type TreeStats struct {
@@ -20,23 +24,32 @@ type ProcessNode struct {
 	IsLast []bool  // tracks if ancestors/self are the last child in their level
 }
 
+// procs persists between ticks so Percent(0) can measure CPU delta.
+var procs = map[int32]*process.Process{}
+
 // CollectTree performs a DFS traversal of the process tree rooted at rootPID,
 // summing RSS across all live descendants. Dead/inaccessible processes are silently skipped.
 func CollectTree(rootPID int32) TreeStats {
 	var stats TreeStats
-	collectDFS(rootPID, 0, nil, &stats)
+	seen := map[int32]*process.Process{}
+	collectDFS(rootPID, 0, nil, &stats, seen)
+	procs = seen
 	return stats
 }
 
-func collectDFS(pid int32, depth int, isLast []bool, stats *TreeStats) {
-	p, err := process.NewProcess(pid)
-	if err != nil {
-		return // process gone
+func collectDFS(pid int32, depth int, isLast []bool, stats *TreeStats, seen map[int32]*process.Process) {
+	p, ok := procs[pid]
+	if !ok {
+		var err error
+		if p, err = process.NewProcess(pid); err != nil {
+			return // process gone
+		}
 	}
+	seen[pid] = p
 
 	if mem, err := p.MemoryInfo(); err == nil {
 		name, _ := p.Name() // best-effort
-		cpu, _ := p.CPUPercent()
+		cpu, _ := p.Percent(0)
 		stats.TotalRSS += mem.RSS
 		stats.TotalCPU += cpu
 		stats.ProcessCount++
@@ -46,12 +59,12 @@ func collectDFS(pid int32, depth int, isLast []bool, stats *TreeStats) {
 			RSS:    mem.RSS,
 			CPU:    cpu,
 			Depth:  depth,
-			IsLast: append([]bool(nil), isLast...),
+			IsLast: isLast,
 		})
 	}
 
 	children, _ := p.Children() // safely ignores errors
 	for i, child := range children {
-		collectDFS(child.Pid, depth+1, append(append([]bool(nil), isLast...), i == len(children)-1), stats)
+		collectDFS(child.Pid, depth+1, append(slices.Clip(isLast), i == len(children)-1), stats, seen)
 	}
 }
