@@ -14,7 +14,6 @@ ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64|amd64)  ARCH="x86_64" ;;
   aarch64|arm64) ARCH="arm64" ;;
-  i386|i686)     ARCH="i386" ;;
   *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 

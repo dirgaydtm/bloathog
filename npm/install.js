@@ -8,7 +8,7 @@ const version = require("../package.json").version;
 
 // Map Node.js platform/arch to GoReleaser format
 const osMap = { Linux: "Linux", Darwin: "Darwin", Windows_NT: "Windows" };
-const archMap = { x64: "x86_64", arm64: "arm64", ia32: "i386" };
+const archMap = { x64: "x86_64", arm64: "arm64" };
 
 const osName = osMap[os.type()];
 const archName = archMap[os.arch()];
