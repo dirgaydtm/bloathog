@@ -41,6 +41,7 @@ type Model struct {
 	rootPID     int32
 	cmd         *exec.Cmd
 	started     bool
+	killing     bool
 	quitting    bool
 	ExitCode    int
 	openStreams int
@@ -133,6 +134,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if m.inputMode {
 			switch msg.Type {
+			case tea.KeyCtrlC:
+				return m.quit()
 			case tea.KeyEsc, tea.KeyEnter:
 				if msg.Type == tea.KeyEnter && m.stdin != nil {
 					m.logs.Push(">" + m.textInput.Value())
@@ -240,12 +243,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamDoneMsg:
 		m.openStreams--
-		if m.openStreams == 0 {
+		if m.openStreams == 0 && !m.killing {
 			cmds = append(cmds, waitCmd(m.cmd))
 		}
 
 	case monitor.ChildExitMsg:
-		if m.quitting {
+		if m.killing {
 			return m.finalizeQuit()
 		}
 		m.ExitCode = msg.ExitCode
