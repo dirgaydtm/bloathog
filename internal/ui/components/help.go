@@ -3,6 +3,7 @@ package components
 import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 )
 
@@ -15,12 +16,10 @@ func RenderHelpBar(h help.Model, keys help.KeyMap, width int) string {
 
 	h.ShortSeparator = "   "
 
-	bar := h.View(keys)
-
 	return lipgloss.NewStyle().
 		Width(width).
 		Align(lipgloss.Center).
 		Foreground(theme.ColorText).
 		Padding(0, 1).
-		Render(bar)
+		Render(ansi.Truncate(h.View(keys), width-2, "…"))
 }

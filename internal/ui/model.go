@@ -38,11 +38,12 @@ type Model struct {
 	projectInfo types.ProjectInfo
 
 	// Process state
-	rootPID  int32
-	cmd      *exec.Cmd
-	started  bool
-	quitting bool
-	ExitCode int
+	rootPID     int32
+	cmd         *exec.Cmd
+	started     bool
+	quitting    bool
+	ExitCode    int
+	openStreams int
 
 	// Interactive state
 	stdin     io.WriteCloser
@@ -57,7 +58,6 @@ type Model struct {
 	cpuGraph    *ring.Buffer[float64]
 	activeGraph int // 0 = RAM, 1 = CPU
 	logs        *ring.Buffer[string]
-	logDirty    bool
 
 	// UI components
 	logPanel    components.LogPanel
@@ -136,8 +136,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyEsc, tea.KeyEnter:
 				if msg.Type == tea.KeyEnter && m.stdin != nil {
 					m.logs.Push(">" + m.textInput.Value())
-					m.logDirty = true
-					io.WriteString(m.stdin, m.textInput.Value()+"\n")
+					m.logPanel.UpdateContent(m.logs)
+					_, _ = io.WriteString(m.stdin, m.textInput.Value()+"\n")
 				}
 				m.inputMode = false
 				m.textInput.Reset()
@@ -173,16 +173,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Up):
 			switch m.focusTarget {
 			case focusLog:
-				m.logPanel.ScrollUp(1)
+				m.logPanel.ScrollUp()
 			case focusProc:
-				m.procPanel.ScrollUp(1)
+				m.procPanel.ScrollUp()
 			}
 		case key.Matches(msg, m.keys.Down):
 			switch m.focusTarget {
 			case focusLog:
-				m.logPanel.ScrollDown(1)
+				m.logPanel.ScrollDown()
 			case focusProc:
-				m.procPanel.ScrollDown(1)
+				m.procPanel.ScrollDown()
 			}
 		}
 
@@ -193,12 +193,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stdin = msg.Stdin
 		m.started = true
 		m.startTime = time.Now()
+		m.openStreams = 2
 		cmds = append(cmds,
-			m.header.SetStarted(true),
+			m.header.Start(),
 			monitor.TickCmd(msg.RootPID),
 			readLinesCmd(msg.Stdout, false),
 			readLinesCmd(msg.Stderr, true),
-			waitCmd(msg.Cmd),
 		)
 
 	case monitor.TickMsg:
@@ -206,22 +206,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.quitting {
 			rss := msg.Stats.TotalRSS
 			m.stats.CurrentRSS = rss
-			if rss > m.stats.PeakRSS {
-				m.stats.PeakRSS = rss
-			}
+			m.stats.PeakRSS = max(m.stats.PeakRSS, rss)
 			m.stats.RunningSumRSS += float64(rss)
 			m.stats.SampleCount++
 			m.stats.ActiveProcesses = msg.Stats.ProcessCount
-			if msg.Stats.ProcessCount > m.stats.PeakProcesses {
-				m.stats.PeakProcesses = msg.Stats.ProcessCount
-			}
+			m.stats.PeakProcesses = max(m.stats.PeakProcesses, msg.Stats.ProcessCount)
 			m.graph.Push(float64(rss) / (1024 * 1024))
 
 			cpu := msg.Stats.TotalCPU / float64(runtime.NumCPU())
 			m.stats.CurrentCPU = cpu
-			if cpu > m.stats.PeakCPU {
-				m.stats.PeakCPU = cpu
-			}
+			m.stats.PeakCPU = max(m.stats.PeakCPU, cpu)
 			m.stats.RunningSumCPU += cpu
 
 			// EMA Smoothing for CPU Graph
@@ -241,15 +235,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, logMsg := range msg.msgs {
 			m.logs.Push(logMsg.Line)
 		}
-		m.logDirty = true
+		m.logPanel.UpdateContent(m.logs)
 		cmds = append(cmds, drainCmd(msg.ch))
 
+	case streamDoneMsg:
+		m.openStreams--
+		if m.openStreams == 0 {
+			cmds = append(cmds, waitCmd(m.cmd))
+		}
+
 	case monitor.ChildExitMsg:
-		// Handle exit code and start teardown
+		if m.quitting {
+			return m.finalizeQuit()
+		}
 		m.ExitCode = msg.ExitCode
 		if m.ExitCode != 0 && m.graph.Len() == 0 {
-			rawLogs := ring.Join(m.logs, "\n")
-			m.FatalErr = &eror.Error{Msg: fmt.Sprintf("command '%s' failed to start properly\n%s", m.projectInfo.Command, rawLogs)}
+			m.FatalErr = &eror.Error{Msg: fmt.Sprintf("command '%s' failed to start properly\n%s", m.projectInfo.Command, ring.Join(m.logs, "\n"))}
 		}
 		return m.finalizeQuit()
 
@@ -261,11 +262,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.header, cmd = m.header.Update(msg)
 		cmds = append(cmds, cmd)
-	}
-
-	if m.logDirty {
-		m.logPanel.UpdateContent(m.logs)
-		m.logDirty = false
 	}
 
 	if m.inputMode {

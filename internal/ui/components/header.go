@@ -2,12 +2,14 @@ package components
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 	"github.com/dirgaydtm/bloathog/internal/ui/types"
@@ -36,12 +38,9 @@ func (m HeaderModel) Init() tea.Cmd {
 	return m.sp.Tick
 }
 
-func (m *HeaderModel) SetStarted(started bool) tea.Cmd {
-	m.started = started
-	if started {
-		return m.sw.Start()
-	}
-	return nil
+func (m *HeaderModel) Start() tea.Cmd {
+	m.started = true
+	return m.sw.Start()
 }
 
 func (m *HeaderModel) Stop() tea.Cmd {
@@ -49,22 +48,16 @@ func (m *HeaderModel) Stop() tea.Cmd {
 }
 
 func (m *HeaderModel) Update(msg tea.Msg) (HeaderModel, tea.Cmd) {
-	var cmds []tea.Cmd
-
-	switch msg := msg.(type) {
+	var cmd tea.Cmd
+	switch msg.(type) {
 	case spinner.TickMsg:
 		if !m.started {
-			var cmd tea.Cmd
 			m.sp, cmd = m.sp.Update(msg)
-			cmds = append(cmds, cmd)
 		}
 	case stopwatch.TickMsg, stopwatch.StartStopMsg:
-		var cmd tea.Cmd
 		m.sw, cmd = m.sw.Update(msg)
-		cmds = append(cmds, cmd)
 	}
-
-	return *m, tea.Batch(cmds...)
+	return *m, cmd
 }
 
 func (m HeaderModel) View(stats types.MonitorState, inputMode bool, width int) string {
@@ -82,48 +75,16 @@ func (m HeaderModel) View(stats types.MonitorState, inputMode bool, width int) s
 		stats.CurrentRSSMB(), stats.PeakRSSMB(),
 		stats.CurrentCPU, stats.PeakCPU)
 
-	left := theme.StyleAccent.Render("bloathog") + "  " + theme.StyleSuccess.Render(m.CmdStr)
-
-	leftW := lipgloss.Width(left)
 	statusW := lipgloss.Width(status)
-
 	contentW := width - 2
-	availableW := contentW - leftW - statusW - 4
-	if availableW < 0 {
-		availableW = 0
-	}
 
-	centerTxt := statsStr
-	if lipgloss.Width(centerTxt) > availableW {
-		if availableW > 3 {
-			runes := []rune(statsStr)
-			if len(runes) > availableW {
-				centerTxt = string(runes[:availableW-3]) + "..."
-			}
-		} else {
-			centerTxt = ""
-		}
-	}
+	cmdStr := ansi.Truncate(m.CmdStr, contentW-statusW-11, "…") // 11 = "bloathog  " + 1 gap
+	left := theme.StyleAccent.Render("bloathog") + "  " + theme.StyleSuccess.Render(cmdStr)
+	leftW := lipgloss.Width(left)
 
-	centerStyled := theme.StyleLabel.Render(centerTxt)
+	center := theme.StyleLabel.Render(ansi.Truncate(statsStr, contentW-leftW-statusW-4, "..."))
 
-	spacerL := (contentW - leftW - statusW - lipgloss.Width(centerStyled)) / 2
-	spacerR := contentW - leftW - statusW - lipgloss.Width(centerStyled) - spacerL
-	if spacerL < 0 {
-		spacerL = 0
-	}
-	if spacerR < 0 {
-		spacerR = 0
-	}
-
-	return lipgloss.NewStyle().
-		Width(width).
-		Padding(0, 1).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top,
-			left,
-			lipgloss.NewStyle().Width(spacerL).Render(""),
-			centerStyled,
-			lipgloss.NewStyle().Width(spacerR).Render(""),
-			status,
-		))
+	gap := max(0, contentW-leftW-statusW-lipgloss.Width(center))
+	row := left + strings.Repeat(" ", gap/2) + center + strings.Repeat(" ", gap-gap/2) + status
+	return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(row)
 }

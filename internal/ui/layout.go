@@ -1,9 +1,15 @@
 package ui
 
+const (
+	minWidth  = 60
+	minHeight = 15
+)
+
 func (m *Model) relayout() {
 	m.procW = max(25, min(m.width/2, int(float64(m.width)*0.20)))
 	m.procPanel.SetSize(m.procW-4, m.graphHeight()-2)
 	m.logPanel.SetSize(m.width-4, m.logPanelHeight()-2)
+	m.textInput.Width = m.width - 4
 }
 
 func (m Model) graphHeight() int {

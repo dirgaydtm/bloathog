@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/dirgaydtm/bloathog/internal/proc"
 	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 )
@@ -39,41 +40,26 @@ func (d processDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		return
 	}
 
-	indent := pi.prefix
-
-	// Indent the second line to match the first.
-	indent2 := strings.ReplaceAll(indent, "├─ ", "│  ")
-	indent2 = strings.ReplaceAll(indent2, "└─ ", "   ")
-
-	rssMB := float64(pi.node.RSS) / (1024 * 1024)
-	rssStr := fmt.Sprintf("%.1f MB", rssMB)
+	// Second line continues the tree's vertical lines under the first.
+	indent2 := strings.NewReplacer("├─ ", "│  ", "└─ ", "   ").Replace(pi.prefix)
 	pidStr := fmt.Sprintf("[%d]", pi.node.PID)
-	cpuStr := fmt.Sprintf("%.1f%%", pi.node.CPU)
 
 	nameStyle := treeStyleName
 	rssStyle := treeStyleRSS
-
 	if index == m.Index() {
-		nameStyle = nameStyle.Foreground(theme.ColorText).Background(theme.ColorAccent)
+		nameStyle = nameStyle.Background(theme.ColorAccent)
 	} else if pi.node.Depth == 0 {
 		nameStyle = nameStyle.Bold(true)
 		rssStyle = rssStyle.Bold(true)
 	}
 
-	name := pi.node.Name
-	// Truncate name if it's too long for the screen.
-	maxNameW := m.Width() - lipgloss.Width(indent) - lipgloss.Width(pidStr) - 2
-	if lipgloss.Width(name) > maxNameW && maxNameW > 3 {
-		runes := []rune(name)
-		if len(runes) > maxNameW {
-			name = string(runes[:maxNameW-1]) + "…"
-		}
-	}
+	name := ansi.Truncate(pi.node.Name, m.Width()-lipgloss.Width(pi.prefix)-lipgloss.Width(pidStr)-2, "…")
+	line1 := pi.prefix + nameStyle.Render(name) + " " + treeStylePID.Render(pidStr)
+	line2 := fmt.Sprintf("%s%s  %s CPU", indent2,
+		rssStyle.Render(fmt.Sprintf("%.1f MB", float64(pi.node.RSS)/(1024*1024))),
+		treeStylePID.Render(fmt.Sprintf("%.1f%%", pi.node.CPU)))
 
-	line1 := fmt.Sprintf("%s%s %s", indent, nameStyle.Render(name), treeStylePID.Render(pidStr))
-	line2 := fmt.Sprintf("%s%s  %s CPU", indent2, rssStyle.Render(rssStr), treeStylePID.Render(cpuStr))
-
-	fmt.Fprintf(w, "%s\n%s", line1, line2)
+	_, _ = fmt.Fprintf(w, "%s\n%s", line1, ansi.Truncate(line2, m.Width(), "…"))
 }
 
 // ProcessTreePanel displays the process tree UI.
@@ -89,6 +75,7 @@ func NewProcessTreePanel(width, height int) ProcessTreePanel {
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
+	l.SetShowPagination(false)
 	l.Styles.NoItems = theme.StyleMuted
 	return ProcessTreePanel{list: l}
 }
@@ -101,11 +88,6 @@ func (p *ProcessTreePanel) SetFocused(focused bool) { p.focused = focused }
 
 // UpdateNodes refreshes the process list.
 func (p *ProcessTreePanel) UpdateNodes(nodes []proc.ProcessNode) {
-	if len(nodes) == 0 {
-		p.list.SetItems(nil)
-		return
-	}
-
 	items := make([]list.Item, len(nodes))
 	for i, n := range nodes {
 		prefix := ""
@@ -130,14 +112,12 @@ func (p *ProcessTreePanel) UpdateNodes(nodes []proc.ProcessNode) {
 
 // View draws the panel.
 func (p *ProcessTreePanel) View() string {
-	header := RenderTitle("Process Tree", p.list.Width()+4, p.focused)
-
 	borderStyle := theme.StylePanel
 	if p.focused {
 		borderStyle = theme.StylePanelFocused
 	}
 	return lipgloss.JoinVertical(lipgloss.Left,
-		header,
+		RenderTitle("Process Tree", p.list.Width()+4, p.focused),
 		borderStyle.
 			Width(p.list.Width()+2).
 			Height(p.list.Height()).
@@ -146,18 +126,7 @@ func (p *ProcessTreePanel) View() string {
 }
 
 // ScrollUp moves selection up.
-func (p *ProcessTreePanel) ScrollUp(n int) {
-	for i := 0; i < n; i++ {
-		p.list.CursorUp()
-	}
-}
+func (p *ProcessTreePanel) ScrollUp() { p.list.CursorUp() }
 
 // ScrollDown moves selection down.
-func (p *ProcessTreePanel) ScrollDown(n int) {
-	for i := 0; i < n; i++ {
-		p.list.CursorDown()
-	}
-}
-
-// Update handles UI events like mouse clicks.
-func (p *ProcessTreePanel) Update(msg tea.Msg) { p.list, _ = p.list.Update(msg) }
+func (p *ProcessTreePanel) ScrollDown() { p.list.CursorDown() }

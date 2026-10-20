@@ -18,7 +18,7 @@ func ParseArgs(args []string) ([]string, error) {
 
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
-			return nil, fmt.Errorf(usageText)
+			return nil, fmt.Errorf("%s", usageText)
 		}
 		return nil, &eror.Error{Msg: "unknown flag provided", Tip: usageText}
 	}

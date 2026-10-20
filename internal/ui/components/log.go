@@ -23,39 +23,39 @@ func NewLogPanel(width, height int) LogPanel {
 
 // SetSize resizes the viewport.
 func (lp *LogPanel) SetSize(width, height int) {
+	atBottom := lp.vp.AtBottom()
 	lp.vp.Width = width
 	lp.vp.Height = height
+	if atBottom {
+		lp.vp.GotoBottom()
+	}
 }
 
 // SetFocused sets whether this panel has keyboard focus.
 func (lp *LogPanel) SetFocused(focused bool) { lp.focused = focused }
 
 func (lp *LogPanel) UpdateContent(buffer *ring.Buffer[string]) {
-	isAtBottom := lp.vp.AtBottom()
-	content := ring.Join(buffer, "\n")
-	lp.vp.SetContent(content)
-	if isAtBottom || buffer.Len() == 1 {
+	atBottom := lp.vp.AtBottom()
+	lp.vp.SetContent(ring.Join(buffer, "\n"))
+	if atBottom {
 		lp.vp.GotoBottom()
 	}
 }
 
 // ScrollUp scrolls the viewport up by one line.
-func (lp *LogPanel) ScrollUp(n int) { lp.vp.LineUp(n) }
+func (lp *LogPanel) ScrollUp() { lp.vp.ScrollUp(1) }
 
 // ScrollDown scrolls the viewport down by one line.
-func (lp *LogPanel) ScrollDown(n int) { lp.vp.LineDown(n) }
+func (lp *LogPanel) ScrollDown() { lp.vp.ScrollDown(1) }
 
 // View renders the log panel with a title and border.
 func (lp *LogPanel) View() string {
-	header := RenderTitle("System Logs", lp.vp.Width+4, lp.focused)
-
 	borderStyle := theme.StylePanel
 	if lp.focused {
 		borderStyle = theme.StylePanelFocused
 	}
-
 	return lipgloss.JoinVertical(lipgloss.Left,
-		header,
+		RenderTitle("System Logs", lp.vp.Width+4, lp.focused),
 		borderStyle.
 			Width(lp.vp.Width+2).
 			Height(lp.vp.Height).

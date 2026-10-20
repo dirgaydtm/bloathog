@@ -1,7 +1,8 @@
 package ui
 
 import (
-	"github.com/dirgaydtm/bloathog/internal/ring"
+	"fmt"
+
 	"github.com/dirgaydtm/bloathog/internal/ui/components"
 	"github.com/dirgaydtm/bloathog/internal/ui/theme"
 	"github.com/dirgaydtm/bloathog/internal/ui/types"
@@ -11,23 +12,27 @@ import (
 )
 
 func (m Model) renderLayout() string {
+	if m.width == 0 {
+		return ""
+	}
+	if m.width < minWidth || m.height < minHeight {
+		msg := fmt.Sprintf("Terminal too small (min %dx%d)", minWidth, minHeight)
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, theme.StyleWarning.Render(msg))
+	}
+
 	var activeKeys help.KeyMap
-	if m.focusTarget == focusGraph {
+	switch m.focusTarget {
+	case focusGraph:
 		activeKeys = types.GraphKeyMap{KeyMap: m.keys}
-	} else if m.focusTarget == focusLog {
+	case focusLog:
 		activeKeys = types.LogKeyMap{KeyMap: m.keys, InputMode: m.inputMode}
-	} else {
+	default:
 		activeKeys = types.ProcKeyMap{KeyMap: m.keys}
 	}
 
-	var bottomSection string
+	bottomSection := components.RenderHelpBar(m.helpModel, activeKeys, m.width)
 	if m.inputMode {
-		bottomSection = lipgloss.JoinVertical(lipgloss.Left,
-			m.textInput.View(),
-			components.RenderHelpBar(m.helpModel, activeKeys, m.width),
-		)
-	} else {
-		bottomSection = components.RenderHelpBar(m.helpModel, activeKeys, m.width)
+		bottomSection = m.textInput.View() + "\n" + bottomSection
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -40,29 +45,13 @@ func (m Model) renderLayout() string {
 
 func (m Model) renderGraphAndProc() string {
 	graphW := m.width - m.procW
-	if graphW < 12 {
-		graphW = 12
-	}
-
-	leftCol := m.procPanel.View()
-
 	isGraphFocused := m.focusTarget == focusGraph
 
-	var graphHeaderTitle string
-	var graphData *ring.Buffer[float64]
-
-	ramTitle := "RAM Usage (MB)"
-	cpuTitle := "CPU Usage (%)"
-
-	if m.activeGraph == 0 {
-		graphHeaderTitle = theme.StyleAccent.Render(ramTitle) + " │ " + theme.StyleMuted.Render(cpuTitle)
-		graphData = m.graph
-	} else {
-		graphHeaderTitle = theme.StyleMuted.Render(ramTitle) + " │ " + theme.StyleAccent.Render(cpuTitle)
-		graphData = m.cpuGraph
+	ramStyle, cpuStyle, graphData := theme.StyleAccent, theme.StyleMuted, m.graph
+	if m.activeGraph == 1 {
+		ramStyle, cpuStyle, graphData = cpuStyle, ramStyle, m.cpuGraph
 	}
-
-	graphHeader := components.RenderTitle(graphHeaderTitle, graphW, isGraphFocused)
+	graphTitle := ramStyle.Render("RAM Usage (MB)") + " │ " + cpuStyle.Render("CPU Usage (%)")
 
 	panelStyle := theme.StylePanel
 	if isGraphFocused {
@@ -70,11 +59,11 @@ func (m Model) renderGraphAndProc() string {
 	}
 
 	graphView := lipgloss.JoinVertical(lipgloss.Left,
-		graphHeader,
+		components.RenderTitle(graphTitle, graphW, isGraphFocused),
 		panelStyle.
 			Width(graphW-2). // Subtract 2 because lipgloss borders add 2 to total width
 			Render(components.RenderGraph(graphData, graphW-4, m.graphHeight()-2, m.activeGraph)),
 	)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, leftCol, graphView)
+	return lipgloss.JoinHorizontal(lipgloss.Top, m.procPanel.View(), graphView)
 }

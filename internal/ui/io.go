@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os/exec"
 
@@ -15,6 +16,8 @@ type logBatchMsg struct {
 	msgs []monitor.LogMsg
 	ch   <-chan monitor.LogMsg
 }
+
+type streamDoneMsg struct{}
 
 // readLinesCmd streams lines from a reader into a channel.
 func readLinesCmd(r io.Reader, isStderr bool) tea.Cmd {
@@ -38,11 +41,11 @@ func drainCmd(ch <-chan monitor.LogMsg) tea.Cmd {
 	return func() tea.Msg {
 		msg, ok := <-ch
 		if !ok {
-			return nil
+			return streamDoneMsg{}
 		}
 
 		batch := []monitor.LogMsg{msg}
-		for i := 0; i < 99; i++ {
+		for len(batch) < 100 {
 			select {
 			case m, ok := <-ch:
 				if !ok {
@@ -58,15 +61,13 @@ func drainCmd(ch <-chan monitor.LogMsg) tea.Cmd {
 }
 
 // waitCmd waits for child process exit.
+// Run after both streams hit EOF: Wait closes the pipes.
 func waitCmd(cmd *exec.Cmd) tea.Cmd {
 	return func() tea.Msg {
-		err := cmd.Wait()
-		code := 0
-		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				code = exitErr.ExitCode()
-			}
+		var exitErr *exec.ExitError
+		if errors.As(cmd.Wait(), &exitErr) {
+			return monitor.ChildExitMsg{ExitCode: exitErr.ExitCode()}
 		}
-		return monitor.ChildExitMsg{ExitCode: code}
+		return monitor.ChildExitMsg{}
 	}
 }
