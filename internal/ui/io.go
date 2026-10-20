@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -23,15 +24,19 @@ type streamDoneMsg struct{}
 func readLinesCmd(r io.Reader, isStderr bool) tea.Cmd {
 	ch := make(chan monitor.LogMsg, 256)
 	go func() {
-		scanner := bufio.NewScanner(r)
-		scanner.Buffer(make([]byte, 64*1024), 64*1024)
-		for scanner.Scan() {
-			ch <- monitor.LogMsg{Line: scanner.Text(), IsStderr: isStderr}
+		defer close(ch)
+		br := bufio.NewReader(r)
+		for {
+			line, err := br.ReadString('\n')
+			if line != "" {
+				line = strings.TrimRight(line, "\r\n")
+				// Keep only what a terminal would show after the last \r.
+				ch <- monitor.LogMsg{Line: line[strings.LastIndexByte(line, '\r')+1:], IsStderr: isStderr}
+			}
+			if err != nil {
+				return
+			}
 		}
-		if err := scanner.Err(); err != nil {
-			ch <- monitor.LogMsg{Line: "[bloathog warning] error reading stream: " + err.Error(), IsStderr: true}
-		}
-		close(ch)
 	}()
 	return drainCmd(ch)
 }
