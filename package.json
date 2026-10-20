@@ -2,6 +2,9 @@
 	"name": "bloathog",
 	"version": "0.1.0",
 	"description": "Wrap your dev server. Watch it eat RAM and CPU. In real time.",
+	"files": [
+		"npm/"
+	],
 	"bin": {
 		"bloathog": "npm/run.js"
 	},
